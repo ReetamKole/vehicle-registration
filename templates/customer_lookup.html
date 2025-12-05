@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Customer Vehicle Lookup</h2>
+
+<form method="post">
+  <label>Registration Number:</label><br />
+  <input type="text" name="registration_number" required /><br />
+
+  <label>Registered Phone:</label><br />
+  <input type="text" name="phone" required /><br /><br />
+
+  <button type="submit">Search</button>
+</form>
+
+{% if vehicle %}
+  <h3>Vehicle Details</h3>
+  <p><strong>Reg No:</strong> {{ vehicle.registration_number }}</p>
+  <p><strong>Brand:</strong> {{ vehicle.brand }}</p>
+  <p><strong>Model:</strong> {{ vehicle.model }}</p>
+  <p><strong>Issue Date:</strong> {{ vehicle.issue_date }}</p>
+  <p><strong>Franchise:</strong> {{ vehicle.franchise.name }} ({{ vehicle.franchise.location }})</p>
+  <p><strong>Owner:</strong> {{ vehicle.owner.name }} ({{ vehicle.owner.phone }})</p>
+{% endif %}
+{% endblock %}

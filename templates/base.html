@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Vehicle Registration System</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 20px; }
+      nav a { margin-right: 10px; text-decoration: none; }
+      .flash-success { color: green; }
+      .flash-danger { color: red; }
+      .flash-warning { color: orange; }
+      .flash-info { color: blue; }
+    </style>
+  </head>
+  <body>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul>
+          {% for category, msg in messages %}
+            <li class="flash-{{ category }}"><strong>{{ category.title() }}:</strong> {{ msg }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+    <nav>
+      <a href="{{ url_for('index') }}">Home</a>
+      <a href="{{ url_for('register_vehicle') }}">Register Vehicle</a>
+      <a href="{{ url_for('customer_lookup') }}">Customer Lookup</a>
+      <a href="{{ url_for('franchise_login') }}">Franchise Login</a>
+      <a href="{{ url_for('franchise_signup') }}">Franchise Signup</a>
+      {% if session.get('owner_id') %}
+        <a href="{{ url_for('franchise_dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('franchise_logout') }}">Logout</a>
+      {% endif %}
+    </nav>
+    <hr />
+
+    {% block content %}{% endblock %}
+  </body>
+</html>

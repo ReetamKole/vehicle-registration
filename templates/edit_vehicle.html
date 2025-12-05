@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Edit Vehicle #{{ vehicle.id }}</h2>
+
+<form method="post">
+  <label>Registration Number:</label><br />
+  <input type="text" name="registration_number" value="{{ vehicle.registration_number }}" required /><br />
+
+  <label>Brand:</label><br />
+  <input type="text" name="brand" value="{{ vehicle.brand }}" required /><br />
+
+  <label>Model:</label><br />
+  <input type="text" name="model" value="{{ vehicle.model }}" required /><br />
+
+  <label>Issue Date:</label><br />
+  <input type="date" name="issue_date"
+         value="{{ vehicle.issue_date.strftime('%Y-%m-%d') }}" required /><br />
+
+  <label>Franchise:</label><br />
+  <select name="franchise_id" required>
+    {% for f in franchises %}
+      <option value="{{ f.id }}" {% if vehicle.franchise_id == f.id %}selected{% endif %}>
+        {{ f.name }} - {{ f.location }}
+      </option>
+    {% endfor %}
+  </select><br /><br />
+
+  <button type="submit">Update Vehicle</button>
+</form>
+{% endblock %}
