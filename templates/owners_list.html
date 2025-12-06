@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Franchise Owners - {{ franchise.name }}</h2>
+
+<p style="color: #718096; margin-bottom: 20px;">
+  All owners registered under {{ franchise.name }} franchise
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Name</th>
+      <th>Email</th>
+      <th>Joined Date</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for owner in owners %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td>{{ owner.name }}</td>
+      <td>{{ owner.email }}</td>
+      <td>{{ owner.created_at.strftime('%Y-%m-%d') if owner.created_at else 'N/A' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if not owners %}
+<p style="text-align: center; color: #718096; margin-top: 40px;">
+  No franchise owners registered yet for this franchise.
+</p>
+{% endif %}
+
+<p style="margin-top: 30px;">
+  <a href="{{ url_for('franchise_dashboard') }}" class="button">← Back to Dashboard</a>
+</p>
+{% endblock %}

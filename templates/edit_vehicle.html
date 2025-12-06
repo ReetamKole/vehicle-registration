@@ -11,76 +11,57 @@
         margin-bottom: 10px;
         width: 300px;
     }
-    .error-box {
-        display: inline-block;
-        background-color: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-        padding: 8px 12px;
-        border-radius: 4px;
-        margin-left: 10px;
-        font-size: 14px;
+    .errors-list {
+        background: #fed7d7;
+        border: 1px solid #fc8181;
+        border-radius: 6px;
+        padding: 15px;
+        margin-bottom: 20px;
+        max-width: 600px;
     }
-    .field-with-error {
-        display: flex;
-        align-items: center;
+    .errors-list ul {
+        margin: 0;
+        padding-left: 20px;
+    }
+    .errors-list li {
+        color: #742a2a;
+        margin: 5px 0;
     }
 </style>
 
 <h2>Edit Vehicle</h2>
 
+
 <form method="POST">
     <h3>Customer Details</h3>
     
     <label>Name:</label>
-    <input type="text" name="customer_name" value="{{ vehicle.owner.name }}" required>
+    <input type="text" name="customer_name" value="{{ customer_name if customer_name is defined else vehicle.owner.name }}" required>
     
     <label>Email:</label>
-    <input type="email" name="customer_email" value="{{ vehicle.owner.email }}" required>
+    <input type="email" name="customer_email" value="{{ customer_email if customer_email is defined else vehicle.owner.email }}" required>
     
     <label>Phone:</label>
-    <input type="text" name="customer_phone" value="{{ vehicle.owner.phone }}" required>
+    <input type="text" name="customer_phone" value="{{ customer_phone if customer_phone is defined else vehicle.owner.phone }}" required>
 
     <h3>Vehicle Details</h3>
     
     <label>Registration Number:</label>
-    <div class="field-with-error">
-        <input type="text" name="registration_number" value="{{ registration_number or vehicle.registration_number }}" required>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              {% if 'Registration Number already exists' in message %}
-                <span class="error-box">{{ message }}</span>
-              {% endif %}
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
-    </div>
+    <input type="text" name="registration_number" value="{{ registration_number if registration_number is defined else vehicle.registration_number }}" required>
     
     <label>Brand:</label>
-    <input type="text" name="brand" value="{{ vehicle.brand }}" required>
+    <input type="text" name="brand" value="{{ brand if brand is defined else vehicle.brand }}" required>
     
     <label>Model:</label>
-    <input type="text" name="model" value="{{ vehicle.model }}" required>
+    <input type="text" name="model" value="{{ model if model is defined else vehicle.model }}" required>
     
     <label>Issue Date:</label>
-    <div class="field-with-error">
-        <input type="date" 
-               name="issue_date" 
-               value="{{ vehicle.issue_date.strftime('%Y-%m-%d') }}" 
-               min="{{ (now() - timedelta(days=7300)).strftime('%Y-%m-%d') }}" 
-               max="{{ now().strftime('%Y-%m-%d') }}"
-               required>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              {% if 'Issue date' in message %}
-                <span class="error-box">{{ message }}</span>
-              {% endif %}
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
-    </div>
+    <input type="date" 
+           name="issue_date" 
+           value="{{ issue_date if issue_date is defined else vehicle.issue_date.strftime('%Y-%m-%d') }}" 
+           min="{{ (now() - timedelta(days=7300)).strftime('%Y-%m-%d') }}" 
+           max="{{ now().strftime('%Y-%m-%d') }}"
+           required>
 
     <br>
     <button type="submit">Update Vehicle</button>

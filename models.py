@@ -23,10 +23,11 @@ class FranchiseOwner(db.Model):
     __tablename__ = "franchise_owners"
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(120), nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)  # will store HASH here
     franchise_id = db.Column(db.Integer, db.ForeignKey("franchises.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # ---------- hashing ----------
     def set_password(self, raw_password: str):

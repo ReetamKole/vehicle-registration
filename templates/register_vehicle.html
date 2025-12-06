@@ -11,19 +11,21 @@
         margin-bottom: 10px;
         width: 300px;
     }
-    .error-box {
-        display: inline-block;
-        background-color: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-        padding: 8px 12px;
-        border-radius: 4px;
-        margin-left: 10px;
-        font-size: 14px;
+    .errors-list {
+        background: #fed7d7;
+        border: 1px solid #fc8181;
+        border-radius: 6px;
+        padding: 15px;
+        margin-bottom: 20px;
+        max-width: 600px;
     }
-    .field-with-error {
-        display: flex;
-        align-items: center;
+    .errors-list ul {
+        margin: 0;
+        padding-left: 20px;
+    }
+    .errors-list li {
+        color: #742a2a;
+        margin: 5px 0;
     }
 </style>
 
@@ -44,18 +46,7 @@
     <h3>Vehicle Details</h3>
     
     <label>Registration Number:</label>
-    <div class="field-with-error">
-        <input type="text" name="registration_number" value="{{ registration_number or '' }}" required>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              {% if 'Registration Number already exists' in message %}
-                <span class="error-box">{{ message }}</span>
-              {% endif %}
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
-    </div>
+    <input type="text" name="registration_number" value="{{ registration_number or '' }}" required>
     
     <label>Brand:</label>
     <input type="text" name="brand" value="{{ brand or '' }}" required>
@@ -64,23 +55,12 @@
     <input type="text" name="model" value="{{ model or '' }}" required>
     
     <label>Issue Date:</label>
-    <div class="field-with-error">
-        <input type="date" 
-               name="issue_date" 
-               value="{{ issue_date or '' }}" 
-               min="{{ (now() - timedelta(days=7300)).strftime('%Y-%m-%d') }}" 
-               max="{{ now().strftime('%Y-%m-%d') }}"
-               required>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              {% if 'Issue date' in message %}
-                <span class="error-box">{{ message }}</span>
-              {% endif %}
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
-    </div>
+    <input type="date" 
+           name="issue_date" 
+           value="{{ issue_date or '' }}" 
+           min="{{ (now() - timedelta(days=7300)).strftime('%Y-%m-%d') }}" 
+           max="{{ now().strftime('%Y-%m-%d') }}"
+           required>
     
     <label>Franchise:</label>
     <input type="text" 

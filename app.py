@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 load_dotenv()
@@ -79,6 +80,73 @@ def inject_datetime():
     }
 
 
+# Add validation functions
+def is_sequential(digits):
+    if len(digits) < 4:
+        return False
+    
+    # Check ascending
+    ascending = all(int(digits[i]) == int(digits[i-1]) + 1 for i in range(1, len(digits)))
+    
+    # Check descending
+    descending = all(int(digits[i]) == int(digits[i-1]) - 1 for i in range(1, len(digits)))
+    
+    return ascending or descending
+
+def validate_email(email):
+    email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(email_regex, email):
+        return "Invalid email format."
+    
+    parts = email.split('@')
+    if len(parts) != 2:
+        return "Invalid email format."
+    
+    local, domain = parts
+    
+    if len(local) == 0 or len(local) > 64:
+        return "Email username too long or empty."
+    if len(domain) == 0 or len(domain) > 255:
+        return "Email domain too long or empty."
+    
+    suspicious = ['test@test.com', 'admin@admin.com', 'user@user.com', 'example@example.com']
+    if email.lower() in suspicious:
+        return "This email address is not allowed."
+    
+    clean_local = re.sub(r'[._-]', '', local)
+    unique_chars = len(set(clean_local))
+    if unique_chars <= 2 and len(local) > 3:
+        return "Email username looks suspicious."
+    
+    domain_parts = domain.split('.')
+    if len(domain_parts) < 2:
+        return "Invalid domain format."
+    
+    tld = domain_parts[-1]
+    if len(tld) < 2 or not tld.isalpha():
+        return "Invalid domain extension."
+    
+    return None
+
+def validate_phone(phone):
+    digits = re.sub(r'\D', '', phone)
+    
+    if len(digits) < 7 or len(digits) > 15:
+        return "Phone number must be 7-15 digits."
+    
+    unique_digits = len(set(digits))
+    if unique_digits == 1:
+        return "Phone number cannot be all same digits."
+    
+    if is_sequential(digits):
+        return "Phone number cannot be sequential digits."
+    
+    invalid_patterns = ['1234567890', '0987654321']
+    if digits in invalid_patterns:
+        return "Invalid phone number pattern."
+    
+    return None
+
 # ---------- Vehicle Registration (Create) ----------
 @app.route("/register", methods=["GET", "POST"])
 def register_vehicle():
@@ -102,62 +170,50 @@ def register_vehicle():
         model = request.form.get("model")
         issue_date_str = request.form.get("issue_date")
 
-        if not (
-            customer_name
-            and customer_email
-            and customer_phone
-            and reg_no
-            and brand
-            and model
-            and issue_date_str
-        ):
-            flash("All fields are required", "danger")
-            return redirect(url_for("register_vehicle"))
+        # Collect all errors
+        errors = []
 
-        try:
-            issue_date = datetime.strptime(issue_date_str, "%Y-%m-%d").date()
-            
-            # Validate date: no future dates
-            if issue_date > datetime.now().date():
-                flash("Issue date cannot be in the future!", "error")
-                return render_template(
-                    "register_vehicle.html",
-                    franchise=franchise,
-                    customer_name=customer_name,
-                    customer_email=customer_email,
-                    customer_phone=customer_phone,
-                    registration_number=reg_no,
-                    brand=brand,
-                    model=model,
-                    issue_date=issue_date_str
-                )
-            
-            # Validate date: no dates older than 20 years
-            twenty_years_ago = datetime.now().date() - timedelta(days=7300)
-            if issue_date < twenty_years_ago:
-                flash("Issue date cannot be more than 20 years old!", "error")
-                return render_template(
-                    "register_vehicle.html",
-                    franchise=franchise,
-                    customer_name=customer_name,
-                    customer_email=customer_email,
-                    customer_phone=customer_phone,
-                    registration_number=reg_no,
-                    brand=brand,
-                    model=model,
-                    issue_date=issue_date_str
-                )
+        if not (customer_name and customer_email and customer_phone and reg_no and brand and model and issue_date_str):
+            errors.append("All fields are required")
+
+        if customer_email:
+            # Validate email
+            email_error = validate_email(customer_email)
+            if email_error:
+                errors.append(email_error)
+
+        if customer_phone:
+            # Validate phone
+            phone_error = validate_phone(customer_phone)
+            if phone_error:
+                errors.append(phone_error)
+
+        if issue_date_str:
+            try:
+                issue_date = datetime.strptime(issue_date_str, "%Y-%m-%d").date()
                 
-        except ValueError:
-            flash("Invalid issue date format", "danger")
-            return redirect(url_for("register_vehicle"))
+                # Validate date: no future dates
+                if issue_date > datetime.now().date():
+                    errors.append("Issue date cannot be in the future!")
+                
+                # Validate date: no dates older than 20 years
+                twenty_years_ago = datetime.now().date() - timedelta(days=7300)
+                if issue_date < twenty_years_ago:
+                    errors.append("Issue date cannot be more than 20 years old!")
+                    
+            except ValueError:
+                errors.append("Invalid issue date format")
 
-        # Check if registration number already exists
-        existing_vehicle = Vehicle.query.filter_by(
-            registration_number=reg_no
-        ).first()
-        if existing_vehicle:
-            flash("Registration Number already exists!", "error")
+        if reg_no:
+            # Check if registration number already exists
+            existing_vehicle = Vehicle.query.filter_by(registration_number=reg_no).first()
+            if existing_vehicle:
+                errors.append("Registration Number already exists!")
+
+        # If there are errors, flash them all and return
+        if errors:
+            for error in errors:
+                flash(error, "error")
             return render_template(
                 "register_vehicle.html",
                 franchise=franchise,
@@ -188,7 +244,7 @@ def register_vehicle():
             brand=brand,
             model=model,
             issue_date=issue_date,
-            franchise_id=franchise_id,  # Use logged-in franchise's ID
+            franchise_id=franchise_id,
             owner_id=customer.id,
         )
         db.session.add(vehicle)
@@ -233,60 +289,51 @@ def franchise_signup():
         franchise_id = request.form.get("franchise_id")
         franchise_password = request.form.get("franchise_password")
 
+        # Collect all errors first
+        errors = []
+
         # Validate all fields
         if not (name and email and password and confirm_password and franchise_id and franchise_password):
-            flash("All fields are required", "error")
-            return render_template(
-                "franchise_signup.html",
-                franchises=franchises,
-                name=name,
-                email=email,
-                franchise_id=franchise_id
-            )
+            errors.append("All fields are required")
+        
+        if email:
+            # Validate email
+            email_error = validate_email(email)
+            if email_error:
+                errors.append(email_error)
+            
+            # Check if email already exists
+            existing_owner = FranchiseOwner.query.filter_by(email=email).first()
+            if existing_owner:
+                errors.append("Email already registered!")
 
         # Check password match
-        if password != confirm_password:
-            flash("Passwords do not match!", "error")
-            return render_template(
-                "franchise_signup.html",
-                franchises=franchises,
-                name=name,
-                email=email,
-                franchise_id=franchise_id
-            )
+        if password and confirm_password and password != confirm_password:
+            errors.append("Account passwords do not match!")
 
-        # Check if email already exists
-        existing_owner = FranchiseOwner.query.filter_by(email=email).first()
-        if existing_owner:
-            flash("Email already registered!", "error")
-            return render_template(
-                "franchise_signup.html",
-                franchises=franchises,
-                name=name,
-                email=email,
-                franchise_id=franchise_id
-            )
+        # Verify franchise
+        if franchise_id:
+            franchise = Franchise.query.get(franchise_id)
+            if not franchise:
+                errors.append("Invalid franchise selected!")
+            elif franchise_password:
+                # Check franchise password
+                if not check_password_hash(franchise.franchise_password, franchise_password):
+                    errors.append("Incorrect franchise password!")
 
-        # Verify franchise password
-        franchise = Franchise.query.get(franchise_id)
-        if not franchise:
-            flash("Invalid franchise selected!", "error")
+        # If there are errors, flash them all and return with form data
+        if errors:
+            for error in errors:
+                flash(error, "error")
             return render_template(
                 "franchise_signup.html",
                 franchises=franchises,
                 name=name,
                 email=email,
-                franchise_id=franchise_id
-            )
-
-        if not check_password_hash(franchise.franchise_password, franchise_password):
-            flash("Incorrect franchise password!", "error")
-            return render_template(
-                "franchise_signup.html",
-                franchises=franchises,
-                name=name,
-                email=email,
-                franchise_id=franchise_id
+                password=password,
+                confirm_password=confirm_password,
+                franchise_id=franchise_id,
+                franchise_password=franchise_password
             )
 
         # Create new franchise owner
@@ -333,60 +380,153 @@ def franchise_dashboard():
 
 @app.route("/vehicle/<int:vehicle_id>/edit", methods=["GET", "POST"])
 def edit_vehicle(vehicle_id):
-    owner_id = session.get("owner_id")
-    if not owner_id:
-        flash("Please log in as franchise owner", "warning")
-        return redirect(url_for("franchise_login"))
-
-    vehicle = Vehicle.query.get_or_404(vehicle_id)
-    franchises = Franchise.query.all()
-
+    # Check if franchise owner is logged in
+    if 'franchise_id' not in session:
+        flash("Please login first!", "error")
+        return redirect(url_for('franchise_login'))
+    
+    franchise_id = session.get('franchise_id')
+    vehicle = Vehicle.query.get(vehicle_id)
+    
+    if not vehicle:
+        flash("Vehicle not found!", "error")
+        return redirect(url_for('franchise_dashboard'))
+    
+    # Check if this vehicle belongs to the logged-in franchise
+    if vehicle.franchise_id != franchise_id:
+        flash("You don't have permission to edit this vehicle!", "error")
+        return redirect(url_for('franchise_dashboard'))
+    
     if request.method == "POST":
-        vehicle.registration_number = request.form.get("registration_number")
-        vehicle.brand = request.form.get("brand")
-        vehicle.model = request.form.get("model")
+        customer_name = request.form.get("customer_name")
+        customer_email = request.form.get("customer_email")
+        customer_phone = request.form.get("customer_phone")
+        registration_number = request.form.get("registration_number")
+        brand = request.form.get("brand")
+        model = request.form.get("model")
         issue_date_str = request.form.get("issue_date")
+        
+        # Collect all errors
+        errors = []
+
+        if not (customer_name and customer_email and customer_phone and registration_number and brand and model and issue_date_str):
+            errors.append("All fields are required")
+
+        if customer_email:
+            # Validate email
+            email_error = validate_email(customer_email)
+            if email_error:
+                errors.append(email_error)
+
+        if customer_phone:
+            # Validate phone
+            phone_error = validate_phone(customer_phone)
+            if phone_error:
+                errors.append(phone_error)
+        
+        # Check if registration number is being changed and already exists
+        if registration_number and registration_number != vehicle.registration_number:
+            existing_vehicle = Vehicle.query.filter_by(registration_number=registration_number).first()
+            if existing_vehicle:
+                errors.append("Registration Number already exists!")
+        
+        if issue_date_str:
+            try:
+                issue_date = datetime.strptime(issue_date_str, "%Y-%m-%d").date()
+                
+                # Validate date: no future dates
+                if issue_date > datetime.now().date():
+                    errors.append("Issue date cannot be in the future!")
+                
+                # Validate date: no dates older than 20 years
+                twenty_years_ago = datetime.now().date() - timedelta(days=7300)
+                if issue_date < twenty_years_ago:
+                    errors.append("Issue date cannot be more than 20 years old!")
+                    
+            except ValueError:
+                errors.append("Invalid issue date format!")
+        
+        # If there are errors, flash them all and return with form data
+        if errors:
+            for error in errors:
+                flash(error, "error")
+            return render_template("edit_vehicle.html", 
+                                 vehicle=vehicle,
+                                 customer_name=customer_name,
+                                 customer_email=customer_email,
+                                 customer_phone=customer_phone,
+                                 registration_number=registration_number,
+                                 brand=brand,
+                                 model=model,
+                                 issue_date=issue_date_str)
+        
+        # Update customer details
+        vehicle.owner.name = customer_name
+        vehicle.owner.email = customer_email
+        vehicle.owner.phone = customer_phone
+        
+        # Update vehicle details
+        vehicle.registration_number = registration_number
+        vehicle.brand = brand
+        vehicle.model = model
+        vehicle.issue_date = issue_date
+        
         try:
-            vehicle.issue_date = datetime.strptime(issue_date_str, "%Y-%m-%d").date()
-        except ValueError:
-            flash("Invalid issue date", "danger")
-            return redirect(url_for("edit_vehicle", vehicle_id=vehicle_id))
-
-        vehicle.franchise_id = int(request.form.get("franchise_id"))
-        db.session.commit()
-        flash("Vehicle updated successfully", "success")
-        return redirect(url_for("franchise_dashboard"))
-
-    return render_template(
-        "edit_vehicle.html",
-        vehicle=vehicle,
-        franchises=franchises,
-    )
+            db.session.commit()
+            flash(f"Vehicle {vehicle.registration_number} updated successfully!", "success")
+            return redirect(url_for('franchise_dashboard'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error updating vehicle: {str(e)}", "error")
+    
+    return render_template("edit_vehicle.html", vehicle=vehicle)
 
 
 # ---------- Customer View ----------
-@app.route("/customer", methods=["GET", "POST"])
+@app.route("/customer-lookup", methods=["GET", "POST"])
 def customer_lookup():
-    vehicle = None
     if request.method == "POST":
-        reg_no = request.form.get("registration_number")
+        registration_number = request.form.get("registration_number")
         phone = request.form.get("phone")
 
-        if not (reg_no and phone):
-            flash("Please provide both registration number and phone", "warning")
-        else:
-            vehicle = (
-                Vehicle.query.join(Customer)
-                .filter(
-                    Vehicle.registration_number == reg_no,
-                    Customer.phone == phone,
-                )
-                .first()
-            )
-            if not vehicle:
-                flash("No vehicle found for given details", "warning")
+        if not registration_number or not phone:
+            flash("Both Registration Number and Phone are required!", "error")
+            return render_template("customer_lookup.html", 
+                                 registration_number=registration_number,
+                                 phone=phone)
 
-    return render_template("customer_lookup.html", vehicle=vehicle)
+        # Find vehicle by registration number
+        vehicle = Vehicle.query.filter_by(registration_number=registration_number).first()
+        
+        # Find customer by phone
+        customer = Customer.query.filter_by(phone=phone).first()
+
+        # Check what exists and what doesn't
+        errors = []
+        if not vehicle:
+            errors.append("Registration Number does not exist")
+        if not customer:
+            errors.append("Registered Phone does not exist")
+        
+        # If either doesn't exist, show specific errors
+        if errors:
+            for error in errors:
+                flash(error, "error")
+            return render_template("customer_lookup.html",
+                                 registration_number=registration_number,
+                                 phone=phone)
+        
+        # Both exist, but check if they match (same vehicle owner)
+        if vehicle.owner_id != customer.id:
+            flash("Registration Number and Phone do not match the same vehicle!", "error")
+            return render_template("customer_lookup.html",
+                                 registration_number=registration_number,
+                                 phone=phone)
+
+        # Success - show vehicle details
+        return render_template("customer_lookup.html", vehicle=vehicle)
+
+    return render_template("customer_lookup.html")
 
 
 @app.route("/delete-vehicle/<int:vehicle_id>", methods=["POST"])
@@ -419,6 +559,22 @@ def delete_vehicle(vehicle_id):
         flash(f"Error deleting vehicle: {str(e)}", "error")
     
     return redirect(url_for('franchise_dashboard'))
+
+
+@app.route("/owners-list")
+def owners_list():
+    # Check if franchise owner is logged in
+    if 'franchise_id' not in session:
+        flash("Please login first!", "error")
+        return redirect(url_for('franchise_login'))
+    
+    franchise_id = session.get('franchise_id')
+    franchise = Franchise.query.get(franchise_id)
+    
+    # Get all franchise owners for this franchise
+    owners = FranchiseOwner.query.filter_by(franchise_id=franchise_id).all()
+    
+    return render_template('owners_list.html', franchise=franchise, owners=owners)
 
 
 if __name__ == "__main__":
