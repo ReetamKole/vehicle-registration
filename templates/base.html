@@ -13,15 +13,7 @@
     </style>
   </head>
   <body>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <ul>
-          {% for category, msg in messages %}
-            <li class="flash-{{ category }}"><strong>{{ category.title() }}:</strong> {{ msg }}</li>
-          {% endfor %}
-        </ul>
-      {% endif %}
-    {% endwith %}
+    
 
     <nav>
       <a href="{{ url_for('index') }}">Home</a>

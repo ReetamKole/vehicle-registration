@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 load_dotenv()
 from flask import (
@@ -11,6 +11,7 @@ from flask import (
     session,
     flash,
 )
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from models import db, Franchise, FranchiseOwner, Customer, Vehicle
 
@@ -65,6 +66,15 @@ def index():
     return render_template("index.html")
 
 
+# Add this to make datetime functions available in templates
+@app.context_processor
+def inject_datetime():
+    return {
+        'now': datetime.now,
+        'timedelta': timedelta
+    }
+
+
 # ---------- Vehicle Registration (Create) ----------
 @app.route("/register", methods=["GET", "POST"])
 def register_vehicle():
@@ -97,9 +107,62 @@ def register_vehicle():
 
         try:
             issue_date = datetime.strptime(issue_date_str, "%Y-%m-%d").date()
+            
+            # Validate date: no future dates
+            if issue_date > datetime.now().date():
+                flash("Issue date cannot be in the future!", "error")
+                return render_template(
+                    "register_vehicle.html",
+                    franchises=franchises,
+                    customer_name=customer_name,
+                    customer_email=customer_email,
+                    customer_phone=customer_phone,
+                    registration_number=reg_no,
+                    brand=brand,
+                    model=model,
+                    issue_date=issue_date_str,
+                    franchise_id=franchise_id
+                )
+            
+            # Validate date: no dates older than 20 years
+            twenty_years_ago = datetime.now().date() - timedelta(days=7300) # 20 years
+            if issue_date < twenty_years_ago:
+                flash("Issue date cannot be more than 20 years old!", "error")
+                return render_template(
+                    "register_vehicle.html",
+                    franchises=franchises,
+                    customer_name=customer_name,
+                    customer_email=customer_email,
+                    customer_phone=customer_phone,
+                    registration_number=reg_no,
+                    brand=brand,
+                    model=model,
+                    issue_date=issue_date_str,
+                    franchise_id=franchise_id
+                )
+                
         except ValueError:
             flash("Invalid issue date format", "danger")
             return redirect(url_for("register_vehicle"))
+
+        # Check if registration number already exists
+        existing_vehicle = Vehicle.query.filter_by(
+            registration_number=reg_no
+        ).first()
+        if existing_vehicle:
+            flash("Registration Number already exists!", "error")
+            return render_template(
+                "register_vehicle.html",
+                franchises=franchises,
+                customer_name=customer_name,
+                customer_email=customer_email,
+                customer_phone=customer_phone,
+                registration_number=reg_no,
+                brand=brand,
+                model=model,
+                issue_date=issue_date_str,
+                franchise_id=franchise_id
+            )
 
         # Find or create customer
         customer = Customer.query.filter_by(
@@ -151,55 +214,91 @@ def franchise_login():
 
     return render_template("franchise_login.html")
 
-@app.route("/franchise/signup", methods=["GET", "POST"])
+
+@app.route("/franchise-signup", methods=["GET", "POST"])
 def franchise_signup():
+    franchises = Franchise.query.all()
+    
     if request.method == "POST":
-        owner_name = request.form.get("name")
+        name = request.form.get("name")
         email = request.form.get("email")
         password = request.form.get("password")
         confirm_password = request.form.get("confirm_password")
-        franchise_name = request.form.get("franchise_name")
-        franchise_location = request.form.get("franchise_location")
+        franchise_id = request.form.get("franchise_id")
+        franchise_password = request.form.get("franchise_password")
 
-        # Basic validation
-        if not all([owner_name, email, password, confirm_password, franchise_name]):
-            flash("All fields except location are required", "danger")
-            return redirect(url_for("franchise_signup"))
+        # Validate all fields
+        if not (name and email and password and confirm_password and franchise_id and franchise_password):
+            flash("All fields are required", "error")
+            return render_template(
+                "franchise_signup.html",
+                franchises=franchises,
+                name=name,
+                email=email,
+                franchise_id=franchise_id
+            )
 
+        # Check password match
         if password != confirm_password:
-            flash("Passwords do not match", "danger")
-            return redirect(url_for("franchise_signup"))
+            flash("Passwords do not match!", "error")
+            return render_template(
+                "franchise_signup.html",
+                franchises=franchises,
+                name=name,
+                email=email,
+                franchise_id=franchise_id
+            )
 
         # Check if email already exists
         existing_owner = FranchiseOwner.query.filter_by(email=email).first()
         if existing_owner:
-            flash("An account with this email already exists", "warning")
-            return redirect(url_for("franchise_login"))
-
-        # Check if franchise exists, if not create it
-        franchise = Franchise.query.filter_by(name=franchise_name).first()
-        if not franchise:
-            franchise = Franchise(
-                name=franchise_name,
-                location=franchise_location or "",
+            flash("Email already registered!", "error")
+            return render_template(
+                "franchise_signup.html",
+                franchises=franchises,
+                name=name,
+                email=email,
+                franchise_id=franchise_id
             )
-            db.session.add(franchise)
-            db.session.commit()
 
-        # Create new owner linked to this franchise
-        owner = FranchiseOwner(
-            name=owner_name,
+        # Verify franchise password
+        franchise = Franchise.query.get(franchise_id)
+        if not franchise:
+            flash("Invalid franchise selected!", "error")
+            return render_template(
+                "franchise_signup.html",
+                franchises=franchises,
+                name=name,
+                email=email,
+                franchise_id=franchise_id
+            )
+
+        if not check_password_hash(franchise.franchise_password, franchise_password):
+            flash("Incorrect franchise password!", "error")
+            return render_template(
+                "franchise_signup.html",
+                franchises=franchises,
+                name=name,
+                email=email,
+                franchise_id=franchise_id
+            )
+
+        # Create new franchise owner
+        new_owner = FranchiseOwner(
+            name=name,
             email=email,
-            franchise_id=franchise.id,
+            password=generate_password_hash(password),
+            franchise_id=int(franchise_id)
         )
-        owner.set_password(password)
-        db.session.add(owner)
+        
+        db.session.add(new_owner)
         db.session.commit()
 
-        flash("Franchise owner account created. Please log in.", "success")
+        flash("Signup successful! Please login.", "success")
         return redirect(url_for("franchise_login"))
 
-    return render_template("franchise_signup.html")
+    return render_template("franchise_signup.html", franchises=franchises)
+
 
 @app.route("/franchise/logout")
 def franchise_logout():

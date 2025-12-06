@@ -1,28 +1,65 @@
 {% extends "base.html" %}
+
 {% block content %}
-<h2>Create Franchise Owner Account</h2>
+<style>
+    form label {
+        display: block;
+        margin-top: 10px;
+    }
+    form input, form select {
+        display: block;
+        margin-bottom: 10px;
+        width: 300px;
+    }
+    .error-box {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+        padding: 8px 12px;
+        border-radius: 4px;
+        margin-bottom: 10px;
+        font-size: 14px;
+    }
+</style>
 
-<form method="post">
-  <h3>Owner Details</h3>
-  <label>Name:</label><br />
-  <input type="text" name="name" required /><br />
+<h2>Franchise Owner Signup</h2>
 
-  <label>Email:</label><br />
-  <input type="email" name="email" required /><br />
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="error-box">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
 
-  <label>Password:</label><br />
-  <input type="password" name="password" required /><br />
-
-  <label>Confirm Password:</label><br />
-  <input type="password" name="confirm_password" required /><br />
-
-  <h3>Franchise Details</h3>
-  <label>Franchise Name:</label><br />
-  <input type="text" name="franchise_name" required /><br />
-
-  <label>Location (optional):</label><br />
-  <input type="text" name="franchise_location" /><br /><br />
-
-  <button type="submit">Sign Up</button>
+<form method="POST">
+    <label>Name:</label>
+    <input type="text" name="name" value="{{ name or '' }}" required>
+    
+    <label>Email:</label>
+    <input type="email" name="email" value="{{ email or '' }}" required>
+    
+    <label>Password:</label>
+    <input type="password" name="password" required>
+    
+    <label>Confirm Password:</label>
+    <input type="password" name="confirm_password" required>
+    
+    <label>Franchise Name:</label>
+    <select name="franchise_id" required>
+        <option value="">Select Franchise</option>
+        {% for franchise in franchises %}
+        <option value="{{ franchise.id }}" {% if franchise_id and franchise.id|string == franchise_id|string %}selected{% endif %}>
+            {{ franchise.name }} - {{ franchise.location }}
+        </option>
+        {% endfor %}
+    </select>
+    
+    <label>Franchise Password:</label>
+    <input type="password" name="franchise_password" placeholder="Secret franchise password" required>
+    
+    <button type="submit">Sign Up</button>
 </form>
+
+<p>Already have an account? <a href="{{ url_for('franchise_login') }}">Login here</a></p>
 {% endblock %}

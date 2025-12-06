@@ -1,38 +1,108 @@
 {% extends "base.html" %}
+
 {% block content %}
+<style>
+    form label {
+        display: block;
+        margin-top: 10px;
+    }
+    form input, form select {
+        display: block;
+        margin-bottom: 10px;
+        width: 300px;
+    }
+    .error-box {
+        display: inline-block;
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+        padding: 8px 12px;
+        border-radius: 4px;
+        margin-left: 10px;
+        font-size: 14px;
+    }
+    .field-with-error {
+        display: flex;
+        align-items: center;
+    }
+</style>
+
 <h2>Register Vehicle</h2>
 
-<form method="post">
-  <h3>Customer Details</h3>
-  <label>Name:</label><br />
-  <input type="text" name="customer_name" required /><br />
-
-  <label>Email:</label><br />
-  <input type="email" name="customer_email" required /><br />
-
-  <label>Phone:</label><br />
-  <input type="text" name="customer_phone" required /><br />
-
-  <h3>Vehicle Details</h3>
-  <label>Registration Number:</label><br />
-  <input type="text" name="registration_number" required /><br />
-
-  <label>Brand:</label><br />
-  <input type="text" name="brand" required /><br />
-
-  <label>Model:</label><br />
-  <input type="text" name="model" required /><br />
-
-  <label>Issue Date:</label><br />
-  <input type="date" name="issue_date" required /><br />
-
-  <label>Franchise:</label><br />
-  <select name="franchise_id" required>
-    {% for f in franchises %}
-      <option value="{{ f.id }}">{{ f.name }} - {{ f.location }}</option>
+<!-- Override the default flash messages - only show non-registration errors at top -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      {% if 'Registration Number already exists' not in message and 'Issue date' not in message %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+      {% endif %}
     {% endfor %}
-  </select><br /><br />
+  {% endif %}
+{% endwith %}
 
-  <button type="submit">Register Vehicle</button>
+<form method="POST" action="{{ url_for('register_vehicle') }}">
+    <h3>Customer Details</h3>
+    
+    <label>Name:</label>
+    <input type="text" name="customer_name" value="{{ customer_name or '' }}" required>
+    
+    <label>Email:</label>
+    <input type="email" name="customer_email" value="{{ customer_email or '' }}" required>
+    
+    <label>Phone:</label>
+    <input type="text" name="customer_phone" value="{{ customer_phone or '' }}" required>
+
+    <h3>Vehicle Details</h3>
+    
+    <label>Registration Number:</label>
+    <div class="field-with-error">
+        <input type="text" name="registration_number" value="{{ registration_number or '' }}" required>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              {% if 'Registration Number already exists' in message %}
+                <span class="error-box">{{ message }}</span>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+    </div>
+    
+    <label>Brand:</label>
+    <input type="text" name="brand" value="{{ brand or '' }}" required>
+    
+    <label>Model:</label>
+    <input type="text" name="model" value="{{ model or '' }}" required>
+    
+    <label>Issue Date:</label>
+    <div class="field-with-error">
+        <input type="date" 
+               name="issue_date" 
+               value="{{ issue_date or '' }}" 
+               min="{{ (now() - timedelta(days=7300)).strftime('%Y-%m-%d') }}" 
+               max="{{ now().strftime('%Y-%m-%d') }}"
+               required>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              {% if 'Issue date' in message %}
+                <span class="error-box">{{ message }}</span>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+    </div>
+    
+    <label>Franchise:</label>
+    <select name="franchise_id" required>
+        <option value="">Select Franchise</option>
+        {% for franchise in franchises %}
+        <option value="{{ franchise.id }}" {% if franchise_id and franchise.id|string == franchise_id|string %}selected{% endif %}>
+            {{ franchise.name }} - {{ franchise.location }}
+        </option>
+        {% endfor %}
+    </select>
+
+    <button type="submit">Register Vehicle</button>
 </form>
 {% endblock %}

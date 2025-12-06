@@ -10,8 +10,10 @@ class Franchise(db.Model):
     __tablename__ = "franchises"
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(120), nullable=False)
-    location = db.Column(db.String(200), nullable=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    location = db.Column(db.String(100), nullable=False)
+    franchise_password = db.Column(db.String(255), nullable=False)  # Add this
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     vehicles = db.relationship("Vehicle", backref="franchise", lazy=True)
     owners = db.relationship("FranchiseOwner", backref="franchise", lazy=True)
