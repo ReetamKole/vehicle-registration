@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
-
+from dotenv import load_dotenv
+load_dotenv()
 from flask import (
     Flask,
     render_template,
@@ -19,6 +20,10 @@ app = Flask(__name__)
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is not set")
+
+# Fix for some platforms that use postgres:// instead of postgresql://
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -281,4 +286,5 @@ def customer_lookup():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # host="0.0.0.0" opens the door to the outside world
+    app.run(host="0.0.0.0", port=5000, debug=True)

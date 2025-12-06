@@ -1,0 +1,10 @@
+swagger: "2.0"
+info:
+  description: "Vehicle Registration API"
+  title: "Vehicle Registration"
+  version: "1.0.0"
+host: "vehicle-api.endpoints.vehicle-registration-480404.cloud.goog"
+x-google-endpoints:
+  - name: "vehicle-api.endpoints.vehicle-registration-480404.cloud.goog"
+    target: "34.67.122.182"
+paths: {}

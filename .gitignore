@@ -1,0 +1,14 @@
+# --- Security: NEVER upload these ---
+.env
+*.json
+secrets/
+key.json
+
+# --- Python Junk ---
+venv/
+__pycache__/
+*.pyc
+
+# --- OS Junk ---
+.DS_Store
+Thumbs.db

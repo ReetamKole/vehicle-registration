@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vehicle-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vehicle-app
+  template:
+    metadata:
+      labels:
+        app: vehicle-app
+    spec:
+      containers:
+      - name: vehicle-app
+        image: us-central1-docker.pkg.dev/vehicle-registration-480404/vehicle-repo/vehicle-app:v2
+        ports:
+        - containerPort: 5000
+        
+        # --- PASTE THIS BLOCK HERE ---
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "125m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+        # -----------------------------
+
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: DATABASE_URL
+        - name: GCP_PROJECT_ID
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: GCP_PROJECT_ID
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: "/secrets/key.json"
+        
+        volumeMounts:
+        - name: sa-key-volume
+          mountPath: "/secrets"
+          readOnly: true
+      
+      volumes:
+      - name: sa-key-volume
+        secret:
+          secretName: gcp-sa-key
