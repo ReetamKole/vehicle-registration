@@ -2,32 +2,185 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vehicle Registration System</title>
     <style>
-      body { font-family: Arial, sans-serif; margin: 20px; }
-      nav a { margin-right: 10px; text-decoration: none; }
-      .flash-success { color: green; }
-      .flash-danger { color: red; }
-      .flash-warning { color: orange; }
-      .flash-info { color: blue; }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+      
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        overflow: hidden;
+      }
+      
+      nav {
+        background: #2d3748;
+        padding: 15px 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      
+      nav .logo {
+        color: white;
+        font-size: 24px;
+        font-weight: bold;
+      }
+      
+      nav ul {
+        list-style: none;
+        display: flex;
+        gap: 20px;
+      }
+      
+      nav a {
+        color: white;
+        text-decoration: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        transition: background 0.3s;
+      }
+      
+      nav a:hover {
+        background: rgba(255,255,255,0.1);
+      }
+      
+      .content {
+        padding: 40px;
+      }
+      
+      h2 {
+        color: #2d3748;
+        margin-bottom: 20px;
+        font-size: 28px;
+      }
+      
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+      
+      th {
+        background: #667eea;
+        color: white;
+        padding: 12px;
+        text-align: left;
+      }
+      
+      td {
+        padding: 12px;
+        border-bottom: 1px solid #e2e8f0;
+      }
+      
+      tr:hover {
+        background: #f7fafc;
+      }
+      
+      a.button, button {
+        background: #667eea;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: background 0.3s;
+      }
+      
+      a.button:hover, button:hover {
+        background: #5568d3;
+      }
+      
+      .alert {
+        padding: 12px 20px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+      }
+      
+      .alert-success {
+        background: #c6f6d5;
+        color: #22543d;
+        border: 1px solid #9ae6b4;
+      }
+      
+      .alert-error, .alert-danger {
+        background: #fed7d7;
+        color: #742a2a;
+        border: 1px solid #fc8181;
+      }
+      
+      form label {
+        display: block;
+        margin-top: 15px;
+        color: #2d3748;
+        font-weight: 500;
+      }
+      
+      form input, form select {
+        width: 100%;
+        max-width: 400px;
+        padding: 10px;
+        margin-top: 5px;
+        border: 1px solid #cbd5e0;
+        border-radius: 6px;
+        font-size: 14px;
+      }
+      
+      form input:focus, form select:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }
     </style>
   </head>
   <body>
-    
-
-    <nav>
-      <a href="{{ url_for('index') }}">Home</a>
-      <a href="{{ url_for('register_vehicle') }}">Register Vehicle</a>
-      <a href="{{ url_for('customer_lookup') }}">Customer Lookup</a>
-      <a href="{{ url_for('franchise_login') }}">Franchise Login</a>
-      <a href="{{ url_for('franchise_signup') }}">Franchise Signup</a>
-      {% if session.get('owner_id') %}
-        <a href="{{ url_for('franchise_dashboard') }}">Dashboard</a>
-        <a href="{{ url_for('franchise_logout') }}">Logout</a>
-      {% endif %}
-    </nav>
-    <hr />
-
-    {% block content %}{% endblock %}
+    <div class="container">
+      <nav>
+        <div class="logo">Vehicle Registration System</div>
+        <ul>
+          {% if session.get('franchise_id') %}
+            <!-- Logged in - Show franchise features -->
+            <li><a href="{{ url_for('register_vehicle') }}">Register Vehicle</a></li>
+            <li><a href="{{ url_for('franchise_dashboard') }}">Dashboard</a></li>
+            <li><a href="{{ url_for('customer_lookup') }}">Customer Lookup</a></li>
+            <li><a href="{{ url_for('franchise_logout') }}">Logout</a></li>
+          {% else %}
+            <!-- Not logged in - Show login/signup -->
+            <li><a href="{{ url_for('index') }}">Home</a></li>
+            <li><a href="{{ url_for('franchise_login') }}">Franchise Login</a></li>
+            <li><a href="{{ url_for('franchise_signup') }}">Franchise Signup</a></li>
+            <li><a href="{{ url_for('customer_lookup') }}">Customer Lookup</a></li>
+          {% endif %}
+        </ul>
+      </nav>
+      
+      <div class="content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+        
+        {% block content %}{% endblock %}
+      </div>
+    </div>
   </body>
 </html>

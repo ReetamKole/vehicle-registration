@@ -29,17 +29,6 @@
 
 <h2>Register Vehicle</h2>
 
-<!-- Override the default flash messages - only show non-registration errors at top -->
-{% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-    {% for category, message in messages %}
-      {% if 'Registration Number already exists' not in message and 'Issue date' not in message %}
-        <div class="alert alert-{{ category }}">{{ message }}</div>
-      {% endif %}
-    {% endfor %}
-  {% endif %}
-{% endwith %}
-
 <form method="POST" action="{{ url_for('register_vehicle') }}">
     <h3>Customer Details</h3>
     
@@ -94,15 +83,12 @@
     </div>
     
     <label>Franchise:</label>
-    <select name="franchise_id" required>
-        <option value="">Select Franchise</option>
-        {% for franchise in franchises %}
-        <option value="{{ franchise.id }}" {% if franchise_id and franchise.id|string == franchise_id|string %}selected{% endif %}>
-            {{ franchise.name }} - {{ franchise.location }}
-        </option>
-        {% endfor %}
-    </select>
+    <input type="text" 
+           value="{{ franchise.name }} - {{ franchise.location }}" 
+           readonly 
+           style="background: #e2e8f0; cursor: not-allowed; color: #4a5568;">
 
+    <br>
     <button type="submit">Register Vehicle</button>
 </form>
 {% endblock %}

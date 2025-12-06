@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: vehicle-app
-        image: us-central1-docker.pkg.dev/vehicle-registration-480404/vehicle-repo/vehicle-app:v2
+        image: us-central1-docker.pkg.dev/vehicle-registration-480404/vehicle-repo/vehicle-app:v3
         ports:
         - containerPort: 5000
         

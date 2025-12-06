@@ -63,7 +63,11 @@ with app.app_context():
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    # If already logged in, redirect to dashboard
+    if session.get('franchise_id'):
+        return redirect(url_for('franchise_dashboard'))
+    # Otherwise show home page with three options
+    return render_template('index.html')
 
 
 # Add this to make datetime functions available in templates
@@ -78,7 +82,14 @@ def inject_datetime():
 # ---------- Vehicle Registration (Create) ----------
 @app.route("/register", methods=["GET", "POST"])
 def register_vehicle():
-    franchises = Franchise.query.all()
+    # Check if franchise owner is logged in
+    if 'franchise_id' not in session:
+        flash("Please login first!", "error")
+        return redirect(url_for('franchise_login'))
+    
+    franchise_id = session.get('franchise_id')
+    franchise = Franchise.query.get(franchise_id)
+    
     if request.method == "POST":
         # Customer details
         customer_name = request.form.get("customer_name")
@@ -90,7 +101,6 @@ def register_vehicle():
         brand = request.form.get("brand")
         model = request.form.get("model")
         issue_date_str = request.form.get("issue_date")
-        franchise_id = request.form.get("franchise_id")
 
         if not (
             customer_name
@@ -100,7 +110,6 @@ def register_vehicle():
             and brand
             and model
             and issue_date_str
-            and franchise_id
         ):
             flash("All fields are required", "danger")
             return redirect(url_for("register_vehicle"))
@@ -113,32 +122,30 @@ def register_vehicle():
                 flash("Issue date cannot be in the future!", "error")
                 return render_template(
                     "register_vehicle.html",
-                    franchises=franchises,
+                    franchise=franchise,
                     customer_name=customer_name,
                     customer_email=customer_email,
                     customer_phone=customer_phone,
                     registration_number=reg_no,
                     brand=brand,
                     model=model,
-                    issue_date=issue_date_str,
-                    franchise_id=franchise_id
+                    issue_date=issue_date_str
                 )
             
             # Validate date: no dates older than 20 years
-            twenty_years_ago = datetime.now().date() - timedelta(days=7300) # 20 years
+            twenty_years_ago = datetime.now().date() - timedelta(days=7300)
             if issue_date < twenty_years_ago:
                 flash("Issue date cannot be more than 20 years old!", "error")
                 return render_template(
                     "register_vehicle.html",
-                    franchises=franchises,
+                    franchise=franchise,
                     customer_name=customer_name,
                     customer_email=customer_email,
                     customer_phone=customer_phone,
                     registration_number=reg_no,
                     brand=brand,
                     model=model,
-                    issue_date=issue_date_str,
-                    franchise_id=franchise_id
+                    issue_date=issue_date_str
                 )
                 
         except ValueError:
@@ -153,15 +160,14 @@ def register_vehicle():
             flash("Registration Number already exists!", "error")
             return render_template(
                 "register_vehicle.html",
-                franchises=franchises,
+                franchise=franchise,
                 customer_name=customer_name,
                 customer_email=customer_email,
                 customer_phone=customer_phone,
                 registration_number=reg_no,
                 brand=brand,
                 model=model,
-                issue_date=issue_date_str,
-                franchise_id=franchise_id
+                issue_date=issue_date_str
             )
 
         # Find or create customer
@@ -182,16 +188,16 @@ def register_vehicle():
             brand=brand,
             model=model,
             issue_date=issue_date,
-            franchise_id=int(franchise_id),
+            franchise_id=franchise_id,  # Use logged-in franchise's ID
             owner_id=customer.id,
         )
         db.session.add(vehicle)
         db.session.commit()
 
         flash("Vehicle registered successfully!", "success")
-        return redirect(url_for("index"))
+        return redirect(url_for("franchise_dashboard"))
 
-    return render_template("register_vehicle.html", franchises=franchises)
+    return render_template("register_vehicle.html", franchise=franchise)
 
 
 # ---------- Franchise Owner Login + Dashboard ----------
@@ -300,12 +306,11 @@ def franchise_signup():
     return render_template("franchise_signup.html", franchises=franchises)
 
 
-@app.route("/franchise/logout")
+@app.route("/franchise-logout")
 def franchise_logout():
-    session.pop("owner_id", None)
-    session.pop("franchise_id", None)
-    flash("Logged out successfully", "success")
-    return redirect(url_for("index"))
+    session.clear()
+    flash("Logged out successfully!", "success")
+    return redirect(url_for('franchise_login'))
 
 
 @app.route("/franchise/dashboard")
@@ -382,6 +387,38 @@ def customer_lookup():
                 flash("No vehicle found for given details", "warning")
 
     return render_template("customer_lookup.html", vehicle=vehicle)
+
+
+@app.route("/delete-vehicle/<int:vehicle_id>", methods=["POST"])
+def delete_vehicle(vehicle_id):
+    # Check if franchise owner is logged in
+    if 'franchise_id' not in session:
+        flash("Please login first!", "error")
+        return redirect(url_for('franchise_login'))
+    
+    franchise_id = session.get('franchise_id')
+    
+    # Get the vehicle
+    vehicle = Vehicle.query.get(vehicle_id)
+    
+    if not vehicle:
+        flash("Vehicle not found!", "error")
+        return redirect(url_for('franchise_dashboard'))
+    
+    # Check if this vehicle belongs to the logged-in franchise
+    if vehicle.franchise_id != franchise_id:
+        flash("You don't have permission to delete this vehicle!", "error")
+        return redirect(url_for('franchise_dashboard'))
+    
+    try:
+        db.session.delete(vehicle)
+        db.session.commit()
+        flash(f"Vehicle {vehicle.registration_number} deleted successfully!", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error deleting vehicle: {str(e)}", "error")
+    
+    return redirect(url_for('franchise_dashboard'))
 
 
 if __name__ == "__main__":

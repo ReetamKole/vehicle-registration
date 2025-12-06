@@ -1,5 +1,40 @@
 {% extends "base.html" %}
+
 {% block content %}
-<h1>Vehicle Registration & Management System</h1>
-<p>Use the navigation links above to register vehicles, login as franchise owner, or view your registered vehicle details.</p>
+<div style="text-align: center; padding: 60px 20px;">
+  <h1 style="color: #2d3748; font-size: 42px; margin-bottom: 20px;">
+    Welcome to Vehicle Registration System
+  </h1>
+  <p style="color: #718096; font-size: 18px; margin-bottom: 60px;">
+    Choose an option to get started
+  </p>
+  
+  <div style="display: flex; gap: 30px; justify-content: center; flex-wrap: wrap; max-width: 900px; margin: 0 auto;">
+    
+    <!-- Franchise Login Card -->
+    <div style="background: white; border: 2px solid #667eea; border-radius: 12px; padding: 40px; width: 250px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.3s;" onmouseover="this.style.transform='translateY(-10px)'" onmouseout="this.style.transform='translateY(0)'">
+      <div style="font-size: 48px; margin-bottom: 20px;"></div>
+      <h3 style="color: #2d3748; margin-bottom: 15px;">Franchise Login</h3>
+      <p style="color: #718096; font-size: 14px; margin-bottom: 25px;">Access your franchise dashboard and manage vehicles</p>
+      <a href="{{ url_for('franchise_login') }}" class="button" style="width: 100%;">Login</a>
+    </div>
+    
+    <!-- Franchise Signup Card -->
+    <div style="background: white; border: 2px solid #667eea; border-radius: 12px; padding: 40px; width: 250px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.3s;" onmouseover="this.style.transform='translateY(-10px)'" onmouseout="this.style.transform='translateY(0)'">
+      <div style="font-size: 48px; margin-bottom: 20px;"></div>
+      <h3 style="color: #2d3748; margin-bottom: 15px;">Franchise Signup</h3>
+      <p style="color: #718096; font-size: 14px; margin-bottom: 25px;">Register your franchise and start managing registrations</p>
+      <a href="{{ url_for('franchise_signup') }}" class="button" style="width: 100%;">Sign Up</a>
+    </div>
+    
+    <!-- Customer Lookup Card -->
+    <div style="background: white; border: 2px solid #667eea; border-radius: 12px; padding: 40px; width: 250px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.3s;" onmouseover="this.style.transform='translateY(-10px)'" onmouseout="this.style.transform='translateY(0)'">
+      <div style="font-size: 48px; margin-bottom: 20px;"></div>
+      <h3 style="color: #2d3748; margin-bottom: 15px;">Customer Lookup</h3>
+      <p style="color: #718096; font-size: 14px; margin-bottom: 25px;">Search for vehicle registration information</p>
+      <a href="{{ url_for('customer_lookup') }}" class="button" style="width: 100%;">Search</a>
+    </div>
+    
+  </div>
+</div>
 {% endblock %}

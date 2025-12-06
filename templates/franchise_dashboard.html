@@ -1,27 +1,51 @@
 {% extends "base.html" %}
+
 {% block content %}
 <h2>Franchise Dashboard - {{ franchise.name }}</h2>
 
-<table border="1" cellpadding="4">
-  <tr>
-    <th>ID</th>
-    <th>Reg No</th>
-    <th>Brand</th>
-    <th>Model</th>
-    <th>Issue Date</th>
-    <th>Actions</th>
-  </tr>
-  {% for v in vehicles %}
+<p style="margin-bottom: 20px;">
+  <a href="{{ url_for('register_vehicle') }}" class="button">+ Register New Vehicle</a>
+</p>
+
+<table>
+  <thead>
     <tr>
-      <td>{{ v.id }}</td>
+      <th>#</th>
+      <th>Reg No</th>
+      <th>Brand</th>
+      <th>Model</th>
+      <th>Issue Date</th>
+      <th>Owner Name</th>
+      <th>Owner Email</th>
+      <th>Owner Phone</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for v in vehicles %}
+    <tr>
+      <td>{{ loop.index }}</td>
       <td>{{ v.registration_number }}</td>
       <td>{{ v.brand }}</td>
       <td>{{ v.model }}</td>
       <td>{{ v.issue_date }}</td>
+      <td>{{ v.owner.name }}</td>
+      <td>{{ v.owner.email }}</td>
+      <td>{{ v.owner.phone }}</td>
       <td>
-        <a href="{{ url_for('edit_vehicle', vehicle_id=v.id) }}">Edit</a>
+        <a href="{{ url_for('edit_vehicle', vehicle_id=v.id) }}" style="margin-right: 10px;">Edit</a>
+        <form method="POST" action="{{ url_for('delete_vehicle', vehicle_id=v.id) }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete vehicle {{ v.registration_number }}?');">
+          <button type="submit" style="background: #e53e3e; padding: 6px 12px; font-size: 14px;">Delete</button>
+        </form>
       </td>
     </tr>
-  {% endfor %}
+    {% endfor %}
+  </tbody>
 </table>
+
+{% if not vehicles %}
+<p style="text-align: center; color: #718096; margin-top: 40px;">
+  No vehicles registered yet. Click "Register New Vehicle" to get started.
+</p>
+{% endif %}
 {% endblock %}
