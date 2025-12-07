@@ -31,6 +31,7 @@
 
 <h2>Register Vehicle</h2>
 
+
 <form method="POST" action="{{ url_for('register_vehicle') }}">
     <h3>Customer Details</h3>
     
@@ -47,6 +48,9 @@
     
     <label>Registration Number:</label>
     <input type="text" name="registration_number" value="{{ registration_number or '' }}" required>
+    
+    <label>Vehicle Number:</label>
+    <input type="text" name="vehicle_no" value="{{ vehicle_no or '' }}" placeholder="Enter vehicle number if available">
     
     <label>Brand:</label>
     <input type="text" name="brand" value="{{ brand or '' }}" required>

@@ -58,6 +58,7 @@ class Vehicle(db.Model):
     brand = db.Column(db.String(100), nullable=False)
     model = db.Column(db.String(100), nullable=False)
     issue_date = db.Column(db.Date, nullable=False)
+    vehicle_no = db.Column(db.String(50), nullable=True)  # Add this line
 
     franchise_id = db.Column(db.Integer, db.ForeignKey("franchises.id"), nullable=False)
     owner_id = db.Column(db.Integer, db.ForeignKey("customers.id"), nullable=False)

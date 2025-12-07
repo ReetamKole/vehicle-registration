@@ -46,6 +46,10 @@
     .detail-value {
         color: #2d3748;
     }
+    .detail-value.pending {
+        color: #ed8936;
+        font-style: italic;
+    }
 </style>
 
 <h2>Customer Vehicle Lookup</h2>
@@ -63,11 +67,18 @@
 
 {% if vehicle %}
 <div class="vehicle-details">
-    <h3>✅ Vehicle Found</h3>
+    <h3>Vehicle Found</h3>
     
     <div class="detail-row">
         <span class="detail-label">Registration Number:</span>
         <span class="detail-value">{{ vehicle.registration_number }}</span>
+    </div>
+    
+    <div class="detail-row">
+        <span class="detail-label">Vehicle Number:</span>
+        <span class="detail-value {% if not vehicle.vehicle_no %}pending{% endif %}">
+            {{ vehicle.vehicle_no if vehicle.vehicle_no else "To be allotted" }}
+        </span>
     </div>
     
     <div class="detail-row">

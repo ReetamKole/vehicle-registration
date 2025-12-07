@@ -49,6 +49,9 @@
     <label>Registration Number:</label>
     <input type="text" name="registration_number" value="{{ registration_number if registration_number is defined else vehicle.registration_number }}" required>
     
+    <label>Vehicle Number:</label>
+    <input type="text" name="vehicle_no" value="{{ vehicle_no if vehicle_no is defined else (vehicle.vehicle_no or '') }}" placeholder="Enter vehicle number if available">
+    
     <label>Brand:</label>
     <input type="text" name="brand" value="{{ brand if brand is defined else vehicle.brand }}" required>
     

@@ -33,33 +33,9 @@ app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key")
 
 db.init_app(app)
 
-
-def create_tables_and_seed():
-    db.create_all()
-
-    if not Franchise.query.first():
-        f1 = Franchise(name="Downtown Motors", location="Hyderabad")
-        f2 = Franchise(name="City Auto Hub", location="Secunderabad")
-        db.session.add_all([f1, f2])
-        db.session.commit()
-
-        owner1 = FranchiseOwner(
-            name="Ravi Kumar",
-            email="ravi@franchise.com",
-            franchise_id=f1.id,
-        )
-        owner1.set_password("password123")
-        owner2 = FranchiseOwner(
-            name="Anita Sharma",
-            email="anita@franchise.com",
-            franchise_id=f2.id,
-        )
-        owner2.set_password("password123")
-        db.session.add_all([owner1, owner2])
-        db.session.commit()
-
+# Ensure tables exist (optional, only if needed):
 with app.app_context():
-    create_tables_and_seed()
+    db.create_all()  # Only creates tables if they don't exist
 
 
 @app.route("/")
@@ -147,7 +123,24 @@ def validate_phone(phone):
     
     return None
 
-# ---------- Vehicle Registration (Create) ----------
+def validate_vehicle_number(vehicle_no):
+    """
+    Validates vehicle number format (chassis/engine number)
+    Expected format: 2 letters, 2 digits, 1-2 letters, 4 digits
+    Example: TS07UC4455, KA01AB1234
+    """
+    # Remove any spaces or dashes user might have typed
+    clean_vehicle_no = vehicle_no.replace(" ", "").replace("-", "").upper()
+    
+    # Pattern: 2 letters, 2 digits, 1-2 letters, 4 digits
+    pattern = r"^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$"
+    
+    if not re.match(pattern, clean_vehicle_no):
+        return "Invalid Vehicle Number format"
+    
+    return None
+
+# Vehicle Registration (Create)
 @app.route("/register", methods=["GET", "POST"])
 def register_vehicle():
     # Check if franchise owner is logged in
@@ -166,6 +159,7 @@ def register_vehicle():
 
         # Vehicle details
         reg_no = request.form.get("registration_number")
+        vehicle_no = request.form.get("vehicle_no")  # Optional field
         brand = request.form.get("brand")
         model = request.form.get("model")
         issue_date_str = request.form.get("issue_date")
@@ -174,7 +168,7 @@ def register_vehicle():
         errors = []
 
         if not (customer_name and customer_email and customer_phone and reg_no and brand and model and issue_date_str):
-            errors.append("All fields are required")
+            errors.append("All required fields must be filled")
 
         if customer_email:
             # Validate email
@@ -187,6 +181,26 @@ def register_vehicle():
             phone_error = validate_phone(customer_phone)
             if phone_error:
                 errors.append(phone_error)
+
+        if reg_no:
+            # Just check for duplicates
+            clean_reg_no = reg_no.replace(" ", "").replace("-", "").upper()
+            existing_vehicle = Vehicle.query.filter_by(registration_number=clean_reg_no).first()
+            if existing_vehicle:
+                errors.append("Registration Number already exists!")
+
+        # Check if vehicle number already exists (if provided)
+        if vehicle_no and vehicle_no.strip():  # Only check if not empty
+            # Validate vehicle number format
+            vehicle_error = validate_vehicle_number(vehicle_no)
+            if vehicle_error:
+                errors.append(vehicle_error)
+            else:
+                # Only check for duplicates if format is valid
+                clean_vehicle_no = vehicle_no.replace(" ", "").replace("-", "").upper()
+                existing_vehicle_no = Vehicle.query.filter_by(vehicle_no=clean_vehicle_no).first()
+                if existing_vehicle_no:
+                    errors.append("Vehicle number already exists!")
 
         if issue_date_str:
             try:
@@ -204,11 +218,17 @@ def register_vehicle():
             except ValueError:
                 errors.append("Invalid issue date format")
 
-        if reg_no:
-            # Check if registration number already exists
-            existing_vehicle = Vehicle.query.filter_by(registration_number=reg_no).first()
-            if existing_vehicle:
-                errors.append("Registration Number already exists!")
+        # NEW: Check email/phone and name consistency
+        if customer_email and customer_phone and customer_name:
+            # Check if email exists with a different name
+            existing_customer_by_email = Customer.query.filter_by(email=customer_email).first()
+            if existing_customer_by_email and existing_customer_by_email.name.lower() != customer_name.lower():
+                errors.append("Check the details properly - Email is registered with a different name")
+            
+            # Check if phone exists with a different name
+            existing_customer_by_phone = Customer.query.filter_by(phone=customer_phone).first()
+            if existing_customer_by_phone and existing_customer_by_phone.name.lower() != customer_name.lower():
+                errors.append("Check the details properly - Phone is registered with a different name")
 
         # If there are errors, flash them all and return
         if errors:
@@ -221,16 +241,21 @@ def register_vehicle():
                 customer_email=customer_email,
                 customer_phone=customer_phone,
                 registration_number=reg_no,
+                vehicle_no=vehicle_no,
                 brand=brand,
                 model=model,
                 issue_date=issue_date_str
             )
-
-        # Find or create customer
-        customer = Customer.query.filter_by(
-            email=customer_email, phone=customer_phone
+        
+        # CHANGED: Look for customer with EXACT matching details (name, email, AND phone)
+        customer = Customer.query.filter(
+            db.func.lower(Customer.name) == customer_name.lower(),
+            Customer.email == customer_email,
+            Customer.phone == customer_phone
         ).first()
+        
         if not customer:
+            # No exact match found, create new customer
             customer = Customer(
                 name=customer_name,
                 email=customer_email,
@@ -239,8 +264,13 @@ def register_vehicle():
             db.session.add(customer)
             db.session.commit()
 
+        # Clean registration number before storing
+        clean_reg_no = reg_no.replace(" ", "").replace("-", "").upper()
+        clean_vehicle_no = vehicle_no.strip() if vehicle_no and vehicle_no.strip() else None
+
         vehicle = Vehicle(
-            registration_number=reg_no,
+            registration_number=clean_reg_no,
+            vehicle_no=clean_vehicle_no,
             brand=brand,
             model=model,
             issue_date=issue_date,
@@ -256,7 +286,7 @@ def register_vehicle():
     return render_template("register_vehicle.html", franchise=franchise)
 
 
-# ---------- Franchise Owner Login + Dashboard ----------
+# Franchise Owner Login + Dashboard 
 @app.route("/franchise/login", methods=["GET", "POST"])
 def franchise_login():
     if request.method == "POST":
@@ -402,6 +432,7 @@ def edit_vehicle(vehicle_id):
         customer_email = request.form.get("customer_email")
         customer_phone = request.form.get("customer_phone")
         registration_number = request.form.get("registration_number")
+        vehicle_no = request.form.get("vehicle_no")
         brand = request.form.get("brand")
         model = request.form.get("model")
         issue_date_str = request.form.get("issue_date")
@@ -410,7 +441,7 @@ def edit_vehicle(vehicle_id):
         errors = []
 
         if not (customer_name and customer_email and customer_phone and registration_number and brand and model and issue_date_str):
-            errors.append("All fields are required")
+            errors.append("All required fields must be filled")
 
         if customer_email:
             # Validate email
@@ -424,12 +455,48 @@ def edit_vehicle(vehicle_id):
             if phone_error:
                 errors.append(phone_error)
         
-        # Check if registration number is being changed and already exists
-        if registration_number and registration_number != vehicle.registration_number:
-            existing_vehicle = Vehicle.query.filter_by(registration_number=registration_number).first()
-            if existing_vehicle:
-                errors.append("Registration Number already exists!")
+        # Check if vehicle number format is valid and not duplicate (if provided and changed)
+        if vehicle_no and vehicle_no.strip():
+            # Validate vehicle number format
+            vehicle_error = validate_vehicle_number(vehicle_no)
+            if vehicle_error:
+                errors.append(vehicle_error)
+            else:
+                clean_vehicle_no = vehicle_no.replace(" ", "").replace("-", "").upper()
+                # Only check if vehicle number is being changed
+                if clean_vehicle_no != vehicle.vehicle_no:
+                    existing_vehicle_no = Vehicle.query.filter_by(vehicle_no=clean_vehicle_no).first()
+                    if existing_vehicle_no:
+                        errors.append("Vehicle number already exists!")
         
+        # Check registration number duplicates
+        if registration_number:
+            clean_reg_no = registration_number.replace(" ", "").replace("-", "").upper()
+            
+            # Check if registration number is being changed and already exists
+            if clean_reg_no != vehicle.registration_number:
+                existing_vehicle = Vehicle.query.filter_by(registration_number=clean_reg_no).first()
+                if existing_vehicle:
+                    errors.append("Registration Number already exists!")
+
+        # NEW: Check email/phone and name consistency
+        if customer_email and customer_phone and customer_name:
+            # Check if email exists with a different name (excluding current customer)
+            existing_customer_by_email = Customer.query.filter(
+                Customer.email == customer_email,
+                Customer.id != vehicle.owner_id
+            ).first()
+            if existing_customer_by_email and existing_customer_by_email.name.lower() != customer_name.lower():
+                errors.append("Check the details properly - Email is registered with a different name")
+            
+            # Check if phone exists with a different name (excluding current customer)
+            existing_customer_by_phone = Customer.query.filter(
+                Customer.phone == customer_phone,
+                Customer.id != vehicle.owner_id
+            ).first()
+            if existing_customer_by_phone and existing_customer_by_phone.name.lower() != customer_name.lower():
+                errors.append("Check the details properly - Phone is registered with a different name")
+
         if issue_date_str:
             try:
                 issue_date = datetime.strptime(issue_date_str, "%Y-%m-%d").date()
@@ -456,17 +523,57 @@ def edit_vehicle(vehicle_id):
                                  customer_email=customer_email,
                                  customer_phone=customer_phone,
                                  registration_number=registration_number,
+                                 vehicle_no=vehicle_no,
                                  brand=brand,
                                  model=model,
                                  issue_date=issue_date_str)
         
-        # Update customer details
-        vehicle.owner.name = customer_name
-        vehicle.owner.email = customer_email
-        vehicle.owner.phone = customer_phone
+        # CHANGED: Check if customer details are being modified
+        old_customer = vehicle.owner
+        customer_changed = (
+            old_customer.name.lower() != customer_name.lower() or
+            old_customer.email != customer_email or
+            old_customer.phone != customer_phone
+        )
+        
+        if customer_changed:
+            # Check if a customer with these exact details already exists
+            existing_customer = Customer.query.filter(
+                db.func.lower(Customer.name) == customer_name.lower(),
+                Customer.email == customer_email,
+                Customer.phone == customer_phone
+            ).first()
+            
+            if existing_customer:
+                # Use existing customer
+                vehicle.owner_id = existing_customer.id
+            else:
+                # Check if this is the only vehicle for the old customer
+                old_customer_vehicle_count = Vehicle.query.filter_by(owner_id=old_customer.id).count()
+                
+                if old_customer_vehicle_count == 1:
+                    # This is the only vehicle, update the customer record
+                    old_customer.name = customer_name
+                    old_customer.email = customer_email
+                    old_customer.phone = customer_phone
+                else:
+                    # Multiple vehicles use this customer, create a new customer record
+                    new_customer = Customer(
+                        name=customer_name,
+                        email=customer_email,
+                        phone=customer_phone
+                    )
+                    db.session.add(new_customer)
+                    db.session.flush()  # Get the new customer ID
+                    vehicle.owner_id = new_customer.id
+        
+        # Clean registration number before storing
+        clean_reg_no = registration_number.replace(" ", "").replace("-", "").upper()
+        clean_vehicle_no = vehicle_no.strip() if vehicle_no and vehicle_no.strip() else None
         
         # Update vehicle details
-        vehicle.registration_number = registration_number
+        vehicle.registration_number = clean_reg_no
+        vehicle.vehicle_no = clean_vehicle_no
         vehicle.brand = brand
         vehicle.model = model
         vehicle.issue_date = issue_date
@@ -578,5 +685,4 @@ def owners_list():
 
 
 if __name__ == "__main__":
-    # host="0.0.0.0" opens the door to the outside world
     app.run(host="0.0.0.0", port=5000, debug=True)

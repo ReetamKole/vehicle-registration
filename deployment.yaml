@@ -14,11 +14,10 @@ spec:
     spec:
       containers:
       - name: vehicle-app
-        image: us-central1-docker.pkg.dev/vehicle-registration-480404/vehicle-repo/vehicle-app:v3
+        image: us-central1-docker.pkg.dev/vehicle-registration-480404/vehicle-repo/vehicle-app:v5
         ports:
         - containerPort: 5000
-        
-        # --- PASTE THIS BLOCK HERE ---
+       
         resources:
           requests:
             memory: "256Mi"
@@ -26,7 +25,7 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "250m"
-        # -----------------------------
+     
 
         env:
         - name: DATABASE_URL

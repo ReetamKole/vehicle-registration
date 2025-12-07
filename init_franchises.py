@@ -30,7 +30,7 @@ def init_franchises():
                 print(f"🔄 Updated password for franchise: {f_data['name']}")
         
         db.session.commit()
-        print("✅ All franchises initialized!")
+        print(" All franchises initialized!")
 
 if __name__ == "__main__":
     init_franchises()
